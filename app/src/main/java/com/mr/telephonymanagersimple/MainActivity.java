@@ -13,12 +13,15 @@ import android.telephony.CellInfo;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements NetworkListener.NetworkStateChangedListener {
 	TelephonyManager telephonyManager;
@@ -93,7 +96,6 @@ public class MainActivity extends AppCompatActivity implements NetworkListener.N
 							}
 						}).show();
 			}
-			return;
 		}
 	}
 
@@ -110,6 +112,77 @@ public class MainActivity extends AppCompatActivity implements NetworkListener.N
 	public void signalStrengthsChangedHandler(SignalStrength signalStrength) {
 		// Method called when a signal strength update is received by the NetworkListener
 		Snackbar.make(rootView,"Signal strength changed!",Snackbar.LENGTH_SHORT).show();
-		signalStrengthTextView.setText(signalStrength.toString());
+
+		Locale currentLocale = Locale.getDefault();
+
+		// Get LTE related info. The getLTEparameters method is needed since SignalStrength
+		// does not directly give access to LTE parameters. The getLTEparameters method will return
+		// a value of 0xffffff if the parameter query is not correct
+		int lteSignalStrength = getLTEparameters(signalStrength,"getLteSignalStrength"); // get signal strength
+		int lteCqi = getLTEparameters(signalStrength,"getLteCqi"); // get Channel Quality Indicator value
+		int lteRsrp = getLTEparameters(signalStrength,"getLteRsrp"); // Get Reference signal received power value
+		int lteRssnr = getLTEparameters(signalStrength,"getLteRssnr"); // Get Reference signal Signal to Noise ratio
+		// Create a string that holds LTE related information
+		String infoLte = String.format(currentLocale,"LTE info:\nSignal Strength: %d [dBm] CQI: %d RSRP: %d [dBm] RSSNR: %d\n",
+				lteSignalStrength,
+				lteCqi,
+				lteRsrp,
+				lteRssnr);
+
+		// Get GSM related info:
+		int gsmSignalStrength = signalStrength.getGsmSignalStrength(); // get GSM signal strength
+		int gsmBitErrorRate = signalStrength.getGsmBitErrorRate(); // Get GSM BER
+		// Create a string that holds GSM related information
+		String infoGSM = String.format(currentLocale,"GSM info:\nSignal Strength: %d [dBm] BER: %d\n",
+				gsmSignalStrength,
+				gsmBitErrorRate);
+
+		// Get CDMA related info:
+		int cdmaDbm = signalStrength.getCdmaDbm(); // get CDMA signal strength
+		int cdmaEcIo = signalStrength.getCdmaEcio();// get CDMA Ec/Ic value (quality indicator)
+		// Create a string that holds CDMA related information
+		String infoCDMA = String.format(currentLocale,"CDMA info:\nSignal Strength: %d [dBm] Ec/Io: %d\n",
+				cdmaDbm,
+				cdmaEcIo);
+		//Display all information in the signalStrengthTextView
+		signalStrengthTextView.setText(infoLte + infoGSM + infoCDMA);
+	}
+	private int getLTEparameters(SignalStrength signalStrength, String parameterName)
+	{
+		// Valid LTE parameters:
+		// - getLteAsuLevel
+		// - getLteCqi
+		// - getLteDbm
+		// - getLteLevel
+		// - getLteRsrp
+		// - getLteRsrq
+		// - getLteRssnr
+		// - getLteSignalStrength
+		if(!parameterName.contains("Lte")) {
+			// Invalid parameter name
+			return 0xffffff;
+		}
+
+		try
+		{
+			Method[] methods = android.telephony.SignalStrength.class.getMethods();
+
+			for (Method mthd : methods)
+			{
+				Log.i(this.getClass().getSimpleName() +"LTE methods: ", mthd.getName());
+				// Find the method to retrieve the desired parameter by its name
+				if (mthd.getName().equals(parameterName))
+				{
+					// The correct method has been found - return the value of the required parameter
+					return  (int) mthd.invoke(signalStrength, new Object[]{});
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			Log.e(this.getClass().getSimpleName(), "Exception: " + e.toString());
+		}
+		// The method was not found in the SignalStrength class - return an arbitrary value
+		return 0xffffff;
 	}
 }

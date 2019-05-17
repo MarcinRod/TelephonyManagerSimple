@@ -39,7 +39,8 @@ public class MainActivity extends AppCompatActivity implements NetworkListener.N
 		signalStrengthTextView = findViewById(R.id.signalStrengthTextView);
 
 		// Check the required permissions
-		if(ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+		if(ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
+				ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 			// Request the missing permissions
 			requestPermission();
 			return;
@@ -50,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements NetworkListener.N
 	}
 	protected void requestPermission() {
 		ActivityCompat.requestPermissions(this,
-				new String[]{Manifest.permission.READ_PHONE_STATE}, MY_PERMISSION_REQUEST_ACCESS);
+				new String[]{Manifest.permission.READ_PHONE_STATE, Manifest.permission.ACCESS_COARSE_LOCATION}, MY_PERMISSION_REQUEST_ACCESS);
 	}
 	@SuppressLint("MissingPermission")
 	private void initTelephonyManager() {
@@ -77,7 +78,8 @@ public class MainActivity extends AppCompatActivity implements NetworkListener.N
 		if(requestCode == MY_PERMISSION_REQUEST_ACCESS){
 			// If request is cancelled, the result arrays are empty.
 			if (grantResults.length > 1
-					&& grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+					&& grantResults[0] == PackageManager.PERMISSION_GRANTED
+					&& grantResults[1] == PackageManager.PERMISSION_GRANTED ) {
 				// permission was granted! Initialize TelephonyManager
 				initTelephonyManager();
 			} else {
